@@ -1,0 +1,98 @@
+# code view
+# find project in seperate mBlock Folder
+
+import event, time, cyberpi, mbot2, mbuild
+import time
+# initialize variables
+base_power = 0
+kp = 0
+left_power = 0
+right_power = 0
+vorne_frei = 0
+links_frei = 0
+rechts_frei = 0
+nichts_frei = 0
+i = 0
+new_len = 0
+pathWay_list = []
+
+@event.start
+def on_start():
+    global base_power, kp, left_power, right_power, vorne_frei, links_frei, rechts_frei, nichts_frei, i, new_len, pathWay_list
+    # DO SOMETHING
+    pass
+
+@event.is_press('a')
+def is_btn_press():
+    global base_power, kp, left_power, right_power, vorne_frei, links_frei, rechts_frei, nichts_frei, i, new_len, pathWay_list
+    cyberpi.stop_other()
+    mbot2.drive_power(0, 0)
+
+@event.is_press('b')
+def is_btn_press1():
+    global base_power, kp, left_power, right_power, vorne_frei, links_frei, rechts_frei, nichts_frei, i, new_len, pathWay_list
+    cyberpi.stop_other()
+    mbot2.forward(50)
+    while True:
+      if mbuild.quad_rgb_sensor.is_color("blue","R1",1):
+        cyberpi.led.show('blue blue blue blue blue')
+        mbot2.motor_stop("all")
+        nichts_frei = 0
+        if 18 < mbuild.ranging_sensor.get_distance(1):
+          links_frei = 1
+          cyberpi.console.println("links frei")
+
+        if 18 < mbuild.ranging_sensor.get_distance(2):
+          rechts_frei = 1
+          cyberpi.console.println("rechts frei")
+
+        if 18 < mbuild.ultrasonic2.get(1):
+          vorne_frei = 1
+          cyberpi.console.println("vorne frei")
+
+        if links_frei == 0 and vorne_frei == 0 and rechts_frei == 0:
+          mbot2.turn(-180)
+          nichts_frei = 1
+
+        while nichts_frei == 0:
+          if vorne_frei == 1:
+            vorne_frei = 0
+            links_frei = 0
+            rechts_frei = 0
+            cyberpi.console.println("going North")
+            pathWay_list.append('forward')
+            while 8 < mbuild.ultrasonic2.get(1):
+              mbot2.forward(50)
+
+            mbot2.forward(0)
+
+          if 18 < mbuild.ranging_sensor.get_distance(1):
+            cyberpi.console.println("going West")
+            mbot2.turn(-93)
+            links_frei = 1
+
+          if 18 < mbuild.ranging_sensor.get_distance(2):
+            pathWay_list.append('turn_right')
+            cyberpi.console.println("going East")
+            mbot2.turn(92)
+            rechts_frei = 1
+
+          if links_frei == 0 and rechts_frei == 0:
+            pathWay_list.append('turn_left')
+            mbot2.turn(-180)
+            nichts_frei = 1
+            cyberpi.console.println("Dead End")
+            time.sleep(1)
+
+          if 18 < mbuild.ultrasonic2.get(1):
+            vorne_frei = 1
+            cyberpi.console.println("vorne frei")
+
+        new_len = len(pathWay_list)
+        for i in range(new_len, 0, -1):
+          cyberpi.console.println(pathWay_list[i - 1])
+          if pathWay_list[i]
+        
+      while 8 < mbuild.ultrasonic2.get(1):
+            mbot2.forward(50)
+        mbot2.forward(0)
