@@ -1,0 +1,21 @@
+import paho.mqtt.client as mqtt
+ 
+BROKER = "172.17.21.85"
+PORT = 1883
+TOPIC = "mirocup/obcs/obc_maze/reqaction"
+ 
+# Create MQTT client
+client = mqtt.Client()
+ 
+# Connect to broker
+client.connect(BROKER, PORT, 60)
+ 
+# Publish a message
+message = "left=0, front=0, right=1, floor_tag=3, request_usr_action=1, planned_action=move, planned_magnitude=40, timeout=30"
+client.publish(TOPIC, message)
+ 
+# Disconnect
+client.disconnect()
+ 
+print(f"Published '{message}' to topic '{TOPIC}'")
+ 
