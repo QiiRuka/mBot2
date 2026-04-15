@@ -36,4 +36,5 @@ cyberpi.console.println('Connected and subscribed to {}'.format(topic_sub.decode
 while True:
     client.check_msg()
     cyberpi.console.println(last_msg)
+    client.publish(topic_sub, 'asking for request')
     time.sleep(1)
