@@ -49,10 +49,12 @@ client.connect()
 client.subscribe(topic_read)
 cyberpi.console.println('Connected and subscribed to {}'.format(topic_read.decode()))
 
-#if something should be done immediately
+#ito check messages constantly without being locked behind a or b button press
 @event.start
 def on_start():
-    pass
+    while True:
+        client.check_msg()
+        time.sleep(0.1)
 
 # just stops the mBot
 @event.is_press('a')
@@ -90,8 +92,25 @@ def is_btn_press1():
         
         client.publish(topic_send, 'left=' + str(links_frei) + ', front='+ str(vorne_frei) +', right=' + str(rechts_frei) +', floor_tag=3, request_usr_action=1, planned_action=move, planned_magnitude=40, timeout=30')
         #message to MQTT left='+str(links_frei)+', front='+str(vorne_frei)+', right='+str(rechts_frei)+', floor_tag=3, request_usr_action=1, planned_action=move, planned_magnitude=40, timeout=30"
-        # this is where a loop should happen to read if there has been a user imput from the obc and you can also stop the count down if there was, as for now 
-        # it just needs to wait longer than the user input countdown (30 seconds) at least needs
+        timer = 31
+        
+        while timer > 0:
+            client.check_msg()
+            #check for on_message
+            cyberpi.console.println(last_msg)
+            time.sleep(1)
+            cyberpi.console.clear()
+            # if there is a on_message
+            if "action=right" in last_msg:
+                cyberpi.console.println('in if')
+                #   and if there is left,right, nach vorne: dann stelle es auf 1 und alles andere 0 WENN eingabe valid is_btn_press
+                rechts_frei = 1
+                links_frei = 0
+                vorne_frei = 0
+            #   else ist nachricht invalide und wird nicht beachtet
+            #count one down on the timer
+            timer = timer - 1
+        
         time.sleep(31)
         
         while nichts_frei == 0:
