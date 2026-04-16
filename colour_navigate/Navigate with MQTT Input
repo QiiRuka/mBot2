@@ -1,0 +1,148 @@
+# Basic Concept, it can communicate with the OBC through the MQTT Broker, but the mBot does not react to it yet
+# only mBot code
+
+import event, time, cyberpi, mbot2, mbuild
+from mqtt import MQTTClient
+
+cyberpi.console.set_font(12)
+
+# initialize variables
+turn_angle = 92
+base_power = 0
+kp = 0
+left_power = 0
+right_power = 0
+vorne_frei = 0
+links_frei = 0
+rechts_frei = 0
+nichts_frei = 0
+i = 0
+new_len = 0
+pathWay_list = []
+
+#MQTT setup
+ssid = 'your ssid'
+password = 'your passcode'
+
+def wifi_connect():
+    cyberpi.wifi.connect(ssid, password)
+    cyberpi.console.println("Connecting to WiFi...")
+    while not cyberpi.wifi.is_connected():
+        time.sleep(0.5)
+    cyberpi.console.println("WiFi connected!")
+
+wifi_connect()
+
+mqtt_server = '172...mqtt_ip'
+client_id = 'cyberpi_subscribe'
+topic_send = b'topic/subtopic if given'
+topic_read = b'topic/topic to read if given'
+
+last_msg = ""
+def on_message(topic, msg): 
+    global last_msg
+    last_msg = msg.decode()
+
+client = MQTTClient(client_id, mqtt_server)
+client.set_callback(on_message)
+client.connect()
+client.subscribe(topic_read)
+cyberpi.console.println('Connected and subscribed to {}'.format(topic_read.decode()))
+
+#if something should be done immediately
+@event.start
+def on_start():
+    pass
+
+# just stops the mBot
+@event.is_press('a')
+def is_btn_press():
+    global base_power, kp, left_power, right_power, vorne_frei, links_frei, rechts_frei, nichts_frei, i, new_len, pathWay_list
+    cyberpi.stop_other()
+    mbot2.drive_power(0, 0)
+
+# main event for navigation
+@event.is_press('b')
+def is_btn_press1():
+    global base_power, kp, left_power, right_power, vorne_frei, links_frei, rechts_frei, nichts_frei, i, new_len, pathWay_list
+    cyberpi.stop_other()
+    mbot2.forward(50)
+    while True:
+      if mbuild.quad_rgb_sensor.is_color("blue","R1",1):
+        cyberpi.led.show('blue blue blue blue blue')
+        mbot2.forward(0)
+        nichts_frei = 0
+        if 18 < mbuild.ranging_sensor.get_distance(1):
+          links_frei = 1
+          cyberpi.console.println("links frei")
+
+        if 18 < mbuild.ranging_sensor.get_distance(2):
+          rechts_frei = 1
+          cyberpi.console.println("rechts frei")
+
+        if 18 < mbuild.ultrasonic2.get(1):
+          vorne_frei = 1
+          cyberpi.console.println("vorne frei")
+
+        if links_frei == 0 and vorne_frei == 0 and rechts_frei == 0:
+          mbot2.turn(-turn_angle*2)
+          nichts_frei = 1
+        
+        client.publish(topic_send, 'left=' + str(links_frei) + ', front='+ str(vorne_frei) +', right=' + str(rechts_frei) +', floor_tag=3, request_usr_action=1, planned_action=move, planned_magnitude=40, timeout=30')
+        #message to MQTT left='+str(links_frei)+', front='+str(vorne_frei)+', right='+str(rechts_frei)+', floor_tag=3, request_usr_action=1, planned_action=move, planned_magnitude=40, timeout=30"
+        # this is where a loop should happen to read if there has been a user imput from the obc and you can also stop the count down if there was, as for now 
+        # it just needs to wait longer than the user input countdown (30 seconds) at least needs
+        time.sleep(31)
+        
+        while nichts_frei == 0:
+          if vorne_frei == 1:
+            vorne_frei = 0
+            links_frei = 0
+            rechts_frei = 0
+            cyberpi.console.println("going North")
+            pathWay_list.append('forward')
+            while 8 < mbuild.ultrasonic2.get(1):
+              mbot2.forward(50)
+
+            mbot2.forward(0)
+
+          if 18 < mbuild.ranging_sensor.get_distance(1):
+            pathWay_list.append('turn_left')
+            cyberpi.console.println("going West")
+            mbot2.turn(-turn_angle)
+            links_frei = 1
+
+          if 18 < mbuild.ranging_sensor.get_distance(2):
+            pathWay_list.append('turn_right')
+            cyberpi.console.println("going East")
+            mbot2.turn(turn_angle)
+            rechts_frei = 1
+
+          if links_frei == 0 and rechts_frei == 0:
+            mbot2.turn(-turn_angle*2)
+            nichts_frei = 1
+            cyberpi.console.println("Dead End")
+            time.sleep(1)
+
+          if 18 < mbuild.ultrasonic2.get(1):
+            vorne_frei = 1
+            cyberpi.console.println("vorne frei")
+
+        new_len = len(pathWay_list)
+        for i in range(new_len-1, -1, -1):
+          cyberpi.console.println(pathWay_list[i - 1])
+          if pathWay_list[i] == 'forward':
+                while 8 < mbuild.ultrasonic2.get(1):
+                    mbot2.forward(50)
+                mbot2.forward(0)
+          if pathWay_list[i] == 'turn_left':
+             # turns right because of back tracking  
+             mbot2.turn(turn_angle)  
+          if pathWay_list[i] == 'turn_right':
+             # turns left because of back tracking
+             mbot2.turn(-turn_angle)  
+        
+
+
+
+
