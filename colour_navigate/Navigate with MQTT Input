@@ -40,8 +40,9 @@ topic_read = b'topic/topic to read if given'
 
 last_msg = ""
 def on_message(topic, msg): 
-    global last_msg
+    global last_msg, is_message_received
     last_msg = msg.decode()
+    is_message_received = 1
 
 client = MQTTClient(client_id, mqtt_server)
 client.set_callback(on_message)
@@ -49,7 +50,7 @@ client.connect()
 client.subscribe(topic_read)
 cyberpi.console.println('Connected and subscribed to {}'.format(topic_read.decode()))
 
-#ito check messages constantly without being locked behind a or b button press
+# check messages constantly without being locked behind a or b button press
 @event.start
 def on_start():
     while True:
@@ -101,13 +102,14 @@ def is_btn_press1():
             time.sleep(1)
             cyberpi.console.clear()
             # if there is a on_message
-            if "action=right" in last_msg:
-                cyberpi.console.println('in if')
-                #   and if there is left,right, nach vorne: dann stelle es auf 1 und alles andere 0 WENN eingabe valid is_btn_press
-                rechts_frei = 1
-                links_frei = 0
-                vorne_frei = 0
-            #   else ist nachricht invalide und wird nicht beachtet
+            if is_message_received == 1:
+                if "action=right" in last_msg:
+                    cyberpi.console.println('in if')
+                    #   and if there is left,right, nach vorne: dann stelle es auf 1 und alles andere 0 WENN eingabe valid is_btn_press
+                    rechts_frei = 1
+                    links_frei = 0
+                    vorne_frei = 0
+                #   else ist nachricht invalide und wird nicht beachtet
             #count one down on the timer
             timer = timer - 1
         
